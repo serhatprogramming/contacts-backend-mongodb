@@ -1,3 +1,7 @@
+// mongoose model and dotenv configuration
+const Contact = require("./models/contact");
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -9,20 +13,15 @@ const requestLogger = (req, res, next) => {
   console.log(`Request Method: ${req.method}`);
   console.log(`Request Path: ${req.path}`);
   Object.keys(req.body).length !== 0 && console.log(`Request Body:`, req.body);
+  console.log("--------------------------------");
   next();
 };
 // Implementing the Middleware
 app.use(requestLogger);
 
-// Hardcoded contacts data
-let contacts = [
-  { id: 1, name: "John Doe", email: "john@example.com" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com" },
-  { id: 3, name: "Bob Johnson", email: "bob@example.com" },
-];
-
 // Route handler for "/api/contacts"
-app.get("/api/contacts", (req, res) => {
+app.get("/api/contacts", async (req, res) => {
+  const contacts = await Contact.find({});
   res.json(contacts);
 });
 
@@ -36,9 +35,8 @@ app.get("/api/info", (req, res) => {
   res.send(response);
 });
 
-app.get("/api/contacts/:id", (req, res) => {
-  const contactId = Number(req.params.id);
-  const contact = contacts.find((contact) => contact.id === contactId);
+app.get("/api/contacts/:id", async (req, res) => {
+  const contact = await Contact.findById(req.params.id);
 
   if (contact) {
     res.json(contact);
@@ -61,7 +59,7 @@ app.delete("/api/contacts/:id", (req, res) => {
   }
 });
 
-app.post("/api/contacts", (req, res) => {
+app.post("/api/contacts", async (req, res) => {
   const { name, email } = req.body;
   // Check if name and email are provided
   if (!name || !email) {
@@ -69,18 +67,11 @@ app.post("/api/contacts", (req, res) => {
       .status(400)
       .json({ error: "Name and email are required fields" });
   }
-  // Check if email already exists in contacts
-  const existingContact = contacts.find((contact) => contact.email === email);
-  if (existingContact) {
-    return res.status(409).json({ error: "Email address already exists" });
-  }
-  // Generate unique ID for the new contact
-  const id = `${Math.random().toString(36).substring(2, 9)}${Date.now()}`;
-  // Create the new contact object
-  const newContact = { id, name, email };
-  // Add the new contact to the contacts list
-  contacts.push(newContact);
-  // Send success response with the newly created contact
+  // Create the new contact Mongoose object
+  const contact = new Contact({ name, email });
+  // save the contact to the database
+  const newContact = await contact.save();
+  // Send the new contact with response
   res.status(201).json(newContact);
 });
 
