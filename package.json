@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build:folder": "rm -rf build && cd ../contacts-frontend-mongodb && npm run build && cp -r build ../contacts-backend-mongodb",
+    "deploy": "npm run build:folder && git add . && git commit -m frontend-build && git push",
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
