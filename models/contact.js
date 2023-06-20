@@ -16,7 +16,7 @@ mongoose
 
 // create mongoose schema for contacts
 const contactSchema = new mongoose.Schema({
-  name: String,
+  name: { type: String, required: true, minLength: 2 },
   email: String,
 });
 

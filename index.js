@@ -18,48 +18,84 @@ const requestLogger = (req, res, next) => {
 };
 // Implementing the Middleware
 app.use(requestLogger);
+// error handler middleware
+const errorHandler = (err, req, res, next) => {
+  console.log(err.message);
+  console.log("--------------------------------");
+  if (err.name === "CastError") {
+    return res.status(400).json({ error: "invalid id" });
+  }
+  next(err);
+};
 
 // Route handler for "/api/contacts"
-app.get("/api/contacts", async (req, res) => {
-  const contacts = await Contact.find({});
-  res.json(contacts);
+app.get("/api/contacts", async (req, res, error) => {
+  try {
+    const contacts = await Contact.find({});
+    res.json(contacts);
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.get("/api/info", (req, res) => {
-  const numContacts = contacts.length;
-  const appName = "Contacts Web Server";
-
-  const response = `<h1>${appName}</h1>
+app.get("/api/info", async (req, res, next) => {
+  try {
+    const contacts = await Contact.find({});
+    const numContacts = contacts.length;
+    const appName = "Contacts Web Server";
+    const response = `<h1>${appName}</h1>
     <p>Number of contacts: ${numContacts}</p>`;
-
-  res.send(response);
-});
-
-app.get("/api/contacts/:id", async (req, res) => {
-  const contact = await Contact.findById(req.params.id);
-
-  if (contact) {
-    res.json(contact);
-  } else {
-    res.status(404).json({ error: "Contact not found" });
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
 });
 
-app.delete("/api/contacts/:id", (req, res) => {
-  const contactId = Number(req.params.id);
-  const contact = contacts.find((contact) => contact.id === contactId);
-
-  if (contact) {
-    contacts = contacts.filter((c) => c.id !== contactId);
-    res.sendStatus(204);
-    // Success response with status 204 (No Content)
-  } else {
-    res.status(404).json({ error: "Contact not found" });
-    // Response with status 404 (Not Found)
+app.get("/api/contacts/:id", async (req, res, next) => {
+  try {
+    const contact = await Contact.findById(req.params.id);
+    if (contact) {
+      res.json(contact);
+    } else {
+      res.status(404).json({ error: "Contact not found" });
+    }
+  } catch (error) {
+    next(error);
   }
 });
 
-app.post("/api/contacts", async (req, res) => {
+app.delete("/api/contacts/:id", async (req, res, next) => {
+  try {
+    const result = await Contact.findByIdAndRemove(req.params.id);
+    if (result) {
+      res.status(204).end();
+    } else {
+      res.status(404).json({ error: "Contact not found" });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/contacts/:id", async (req, res, next) => {
+  const { name, email } = req.body;
+  try {
+    const updatedContact = await Contact.findByIdAndUpdate(
+      req.params.id,
+      { name, email },
+      { new: true }
+    );
+    if (updatedContact) {
+      res.json(updatedContact);
+    } else {
+      res.status(404).json({ error: "Contact not found" });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/contacts", async (req, res, next) => {
   const { name, email } = req.body;
   // Check if name and email are provided
   if (!name || !email) {
@@ -69,12 +105,18 @@ app.post("/api/contacts", async (req, res) => {
   }
   // Create the new contact Mongoose object
   const contact = new Contact({ name, email });
-  // save the contact to the database
-  const newContact = await contact.save();
-  // Send the new contact with response
-  res.status(201).json(newContact);
+  try {
+    // save the contact to the database
+    const newContact = await contact.save();
+    // Send the new contact with response
+    res.status(201).json(newContact);
+  } catch (error) {
+    next(error);
+  }
 });
 
+// implement error handler middleware
+app.use(errorHandler);
 // Start the server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
