@@ -17,7 +17,17 @@ mongoose
 // create mongoose schema for contacts
 const contactSchema = new mongoose.Schema({
   name: { type: String, required: true, minLength: 2 },
-  email: String,
+  email: {
+    type: String,
+    required: true,
+    validate: {
+      validator: function (value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(value);
+      },
+      message: "Invalid email format",
+    },
+  },
 });
 
 contactSchema.set("toJSON", {
